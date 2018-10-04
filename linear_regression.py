@@ -1,58 +1,69 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from operator import add
 
-class LinearRegression:
-	def __init__(self, x_data, y_data, degree):
-		self.x_data = self.instantiate_data(x_data, degree)
-		self.y_data = np.matrix(y_data).T
+class LinearRegression(object):
+    '''
+    A class that represents a Linear Regression classifier
+    '''
 
-		self.params = np.ones((1, self.x_data[0].size)).T
-		self.residuals = []
+    def fit(self, X, y, bias=True):
+        '''
+        Finds the parameters that minimises the 
+        MSE of the data points to a straight line.
 
-	@property
-	def number_of_points(self):
-		return len(self.y_data)
+        Arguments:
+                X: the features of the data points
+                y: the labels of the data points
+                bias: specify whether a bias should be used or not
 
-	def instantiate_data(self, x_data, degree):
-		x_matrix = np.ones(len(x_data))
+        Returns:
+                theta: the found parameters
+        '''
+        if bias:
+            bias = np.ones((X.shape[0], 1))
+            X = np.hstack([X, bias])
 
-		for i in range(1, degree + 1):
-			x_matrix = np.c_[x_matrix, [x**i for x in x_data]]
+        XT = X.T
+        XTX = np.dot(XT, X)
 
-		return x_matrix
+        inverse_XTX = np.linalg.inv(XTX)
 
-	def model(self, x, params):
-		return np.dot(x, params)
+        inverse_XTX_XT = np.dot(inverse_XTX, XT)
 
-	def cost(self, x, y, params):
-		return 1./(2 * len(x)) * np.sum(np.square(self.model(x, params) - y))
+        theta = np.dot(inverse_XTX_XT, y)
+        self.theta = theta
 
-	def gradient_descent(self, learning_rate, regularisation, num_iterations=10000):
-		temp_params = []
-		iters = 0
+        return theta
 
-		while iters < num_iterations:
-			new_param = self.params[0] - learning_rate / self.number_of_points * np.sum(np.dot(np.matrix(self.x_data[:, 0]), self.model(self.x_data, self.params) - self.y_data))
-			temp_params.append(new_param)
+    def predict(self, X, bias=True):
+        '''
+        Given data points, predicts what the
+        labels will be.
 
-			for index, param in enumerate(self.params[1:]):
-				new_param = param * (1 - learning_rate * regularisation / (self.number_of_points)) - learning_rate / self.number_of_points * np.sum(np.dot(np.matrix(self.x_data[:, index + 1]), self.model(self.x_data, self.params) - self.y_data))
-				temp_params.append(new_param)
-			
-			self.params = np.array(temp_params)
+        Arguments: 
+                X: the features of the data points
+                bias: specify whether a bias should be used or not.
+        '''
+        if bias:
+            bias = np.ones((X.shape[0], 1))
+            X = np.hstack([X, bias])
 
-			iters += 1
-			temp_params = []
+        y_hat = np.dot(X, self.theta)
 
-			training_cost = self.cost(self.x_data, self.y_data, self.params)
-			if iters % 100 == 0:
-				print("After " + str(iters) + " iterations: " + str(training_cost))
+        return y_hat
 
-			self.residuals.append(training_cost)
+    def loss(self, y, y_hat):
+        '''
+        Calculates the loss between the predicted
+        labels and the true labels.
 
-		return self.params, training_cost	
+        Arguments: 
+                y: the true labels
+                y_hat: the predicted labels
 
-	def evaluate(self, X_test, y_test):
-		return self.cost(X_test, y_test, self.params)
-	
+        Returns:
+                loss: the loss between the real and predicted labels
+        '''
+        number_of_points = y.shape[0]
+        loss = 1. / number_of_points * np.linalg.norm(y - y_hat)
+
+        return loss
